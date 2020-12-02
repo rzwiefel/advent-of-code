@@ -1,4 +1,4 @@
-(ns aoc-2019
+(ns aoc-2020
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.test :refer [deftest is are]]
