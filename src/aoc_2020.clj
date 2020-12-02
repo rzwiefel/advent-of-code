@@ -66,7 +66,7 @@
     ;(println let-count)
     (and (>= let-count min) (<= let-count max))))
 
-(defn count-valid []
+(defn count-valid-sled []
   (->> "2020-d2.txt"
        file->vec
        parts
@@ -80,29 +80,31 @@
   (is (= (check-sled-pass ["1-3" "b:" "cdefg"]) false)))
 
 (deftest check-sled-pass-report
-  (is (= (count-valid) 396)))
+  (is (= (count-valid-sled) 396)))
 
 ; Day 2 Part 2
 (defn check-letter [letter pos pwd]
   (= letter (nth pwd pos)))
 
 (defn check-toboggan-pass [line]
-  (let [[p1 p2] (map #(- (Integer/parseInt %) 1) (s/split (first line) #"-"))
+  (let [[p1 p2] (map #(dec (Integer/parseInt %)) (s/split (first line) #"-"))
         letter (first (second line))
         pwd (last line)
         p1? (check-letter letter p1 pwd)
         p2? (check-letter letter p2 pwd)]
     (or (and p1? (not p2?)) (and p2? (not p1?)))))
 
+(defn count-toboggan-valid []
+  (->> "2020-d2.txt"
+       file->vec
+       parts
+       (map check-toboggan-pass)
+       (filter true?)
+       count))
+
 (deftest toboggen-pass-test
   (is (= (check-toboggan-pass ["1-3" "a:" "abcde"]) true))
-  (is (= (->> "2020-d2.txt"
-              file->vec
-              parts
-              (map check-toboggan-pass)
-              (filter true?)
-              count)
-        428)))
+  (is (= (count-toboggan-valid) 428)))
 
 
 
