@@ -2,7 +2,9 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.test :refer [deftest is are]]
-            [clojure.math.combinatorics :as c]))
+            [clojure.math.combinatorics :as c]
+            [clojure.pprint :refer [pprint]]
+            [portal.api :as p]))
 
 
 (defn read-resource [name]
@@ -52,13 +54,13 @@
 
 ; --------------------------------------------------------
 ; Day 2 Part 1
+(defn parts [lines]
+  (map #(s/split % #" ") lines))
+
 (def day2-input
   (->> "2020-d2.txt"
        file->vec
        parts))
-
-(defn parts [lines]
-  (map #(s/split % #" ") lines))
 
 (defn check-sled-pass [line]
   (let [[min max] (map #(Integer/parseInt %) (s/split (first line) #"-"))
@@ -106,6 +108,39 @@
 (deftest toboggen-pass-test
   (is (= (check-toboggan-pass ["1-3" "a:" "abcde"]) true))
   (is (= (count-toboggan-valid) 428)))
+
+
+; --------------------------------------------------------
+; Day 3 Part 1
+
+(def d3-input
+  (->> "2020-d3.txt"
+       file->vec))
+
+(def d3-test-input
+  (->> "2020-d3-test.txt"
+       file->vec))
+
+(defn traverse [treemap col drow dcol trees-hit open-spots]
+  (let [cur-row (first treemap)]
+    (if (nil? cur-row)
+      [trees-hit open-spots]
+      (let [cur-spot (nth cur-row col)
+            new-col (mod (+ col dcol) (count cur-row))]
+        (if (= \# cur-spot)
+          (traverse (nthrest treemap drow) new-col drow dcol (inc trees-hit) open-spots)
+          (traverse (nthrest treemap drow) new-col drow dcol trees-hit (inc open-spots)))))))
+
+(deftest test-traverse
+  (is (= [7 4] (traverse d3-test-input 0 1 3 0 0)))
+  (is (= [84 239] (traverse d3-input 0 1 1 0 0)))
+  (is (= 5140884672
+         (->> (for [[drow dcol] [[1 1] [1 3] [1 5] [1 7] [2 1]]
+                    :let [args [d3-input 0 drow dcol 0 0]]]
+                (apply traverse args))
+           (map first)
+           (reduce *)))))
+
 
 
 
