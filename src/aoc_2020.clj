@@ -111,7 +111,7 @@
 
 
 ; --------------------------------------------------------
-; Day 3 Part 1
+; Day 3 Part 1 and 2
 
 (def d3-input
   (->> "2020-d3.txt"
@@ -128,8 +128,8 @@
       (let [cur-spot (nth cur-row col)
             new-col (mod (+ col dcol) (count cur-row))]
         (if (= \# cur-spot)
-          (traverse (nthrest treemap drow) new-col drow dcol (inc trees-hit) open-spots)
-          (traverse (nthrest treemap drow) new-col drow dcol trees-hit (inc open-spots)))))))
+          (recur (nthrest treemap drow) new-col drow dcol (inc trees-hit) open-spots)
+          (recur (nthrest treemap drow) new-col drow dcol trees-hit (inc open-spots)))))))
 
 (deftest test-traverse
   (is (= [7 4] (traverse d3-test-input 0 1 3 0 0)))
@@ -138,10 +138,84 @@
          (->> (for [[drow dcol] [[1 1] [1 3] [1 5] [1 7] [2 1]]
                     :let [args [d3-input 0 drow dcol 0 0]]]
                 (apply traverse args))
-           (map first)
-           (reduce *)))))
+              (map first)
+              (reduce *)))))
+
+; --------------------------------------------------------
+; Day 3 Part 1 and 2
+
+(def d4-input
+  (s/split (->> "2020-d4.txt"
+                io/resource
+                slurp)
+           #"\n\n"))
+
+(def req-keys #{"byr" "iyr" "eyr" "hgt" "hcl" "ecl" "pid"})
+
+(defn break [line]
+  (let [parts (s/split line #"\n|\s")]
+    (apply hash-map (flatten (map #(s/split % #":") parts)))))
+
+(defn valid-passport [data]
+  (let [imp (keep req-keys (keys data))]
+    (empty? (remove (set imp) req-keys))))
+
+(defn valid-num-range [key lower upper]
+  (fn [data]
+    (let [name (get data key)]
+      (if (nil? name)
+        false
+        (let [namenum (Integer/parseInt name)]
+          (<= lower namenum upper))))))
+
+(defn valid-hgt [data]
+  (let [hgt (get data "hgt")]
+    (if (nil? hgt)
+      false
+      (let [[_ numstr unit] (re-matches #"(\d+)(\w+)" hgt)
+            num (Integer/parseInt numstr)]
+        (if (= "cm" unit)
+          (<= 150 num 193)
+          (<= 59 num 76))))))
 
 
+(defn re-validater [key re]
+  (fn [data]
+    (let [val (get data key)]
+      (if (nil? val)
+        false
+        (some? (re-matches re val))))))
 
+(defn check-all-passport [data]
+  ((every-pred
+     valid-passport
+     (valid-num-range "byr" 1920 2002)
+     (valid-num-range "eyr" 2020 2030)
+     (valid-num-range "iyr" 2010 2020)
+     (re-validater "hcl" #"#[0-9a-f]{6}")
+     (re-validater "pid" #"[0-9]{9}")
+     (re-validater "ecl" #"amb|blu|brn|gry|grn|hzl|oth")
+     valid-hgt)
 
+   data))
 
+(deftest checksplit
+  (is (= 233 (->> d4-input
+                  (map break)
+                  (map valid-passport)
+                  (filter true?)
+                  count))))
+
+(deftest checkpassportisvalid
+  (is (= true (check-all-passport {"hgt" "67in",
+                                   "pid" "361065637",
+                                   "byr" "2000",
+                                   "eyr" "2027",
+                                   "iyr" "2020",
+                                   "ecl" "gry",
+                                   "hcl" "#623a2f"})))
+  (is (= 111 (->> d4-input
+                  (map break)
+                  (map check-all-passport)
+                  (filter true?)
+                  count))))
