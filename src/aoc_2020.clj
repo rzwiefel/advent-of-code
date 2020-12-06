@@ -1,6 +1,8 @@
 (ns aoc-2020
   (:require [clojure.java.io :as io]
+            [clojure.set :as cset]
             [clojure.string :as s]
+            [clojure.spec.alpha :as spec]
             [clojure.test :refer [deftest is are]]
             [clojure.math.combinatorics :as c]
             [clojure.pprint :refer [pprint]]
@@ -142,7 +144,7 @@
               (reduce *)))))
 
 ; --------------------------------------------------------
-; Day 3 Part 1 and 2
+; Day 4 Part 1 and 2
 
 (def d4-input
   (s/split (->> "2020-d4.txt"
@@ -219,3 +221,79 @@
                   (map check-all-passport)
                   (filter true?)
                   count))))
+
+; --------------------------------------------------------
+; Day 5 Part 1 and 2
+
+(def d5-input
+  (->> "2020-d5.txt"
+       file->vec))
+
+(defn binarize [line]
+  (-> line
+      (s/replace "B" "1")
+      (s/replace "F" "0")
+      (s/replace "L" "0")
+      (s/replace "R" "1")))
+
+(def d5-sorted-input (->> d5-input
+                          (map binarize)
+                          (map #(Integer/parseInt % 2))
+                          sort))
+
+(deftest test-binarize
+  (is (= "1110100101" (binarize "BBBFBFFRLR"))))
+
+(deftest test-highest-seat
+  (is (= 994 (last d5-sorted-input))))
+
+(deftest find-missing-seat
+  (let [full-list (range
+                    (apply min d5-sorted-input)
+                    (inc (apply max d5-sorted-input)))
+        missing (remove (set d5-sorted-input) full-list)]
+    (is (= '(741) missing))))
+
+
+; --------------------------------------------------------
+; Day 6 Part 1 and 2
+
+(def d6-input
+  (s/split (->> "2020-d6.txt"
+                io/resource
+                slurp)
+           #"\n\n"))
+
+(defn d6-p1 [group]
+  (let [letterset (set (s/replace group "\n" ""))]
+    (count letterset)))
+
+(deftest test-d6
+  (is (= 6947 (reduce + (map d6-p1 d6-input)))))
+
+(defn d6-separate-group [line]
+  (s/split line #"\n"))
+
+(deftest test-separate
+  (is (= '(#{\a \b} #{\a \c} (d6-separate-group "ab\nac"))))
+  (is (= '(#{\a \b} #{\a \c} (map set (d6-separate-group "ab\nac")))))
+  (is (= '(#{\a} (cset/intersection
+                   (map set
+                        (d6-separate-group "ab\nac")))))))
+
+(defn d6-p2 [line]
+  (apply cset/intersection (->> line
+                                d6-separate-group
+                                (map set))))
+
+(deftest test-d6-p2
+  (is (= #{\d \f \r \y} (d6-p2 "yfdr\nyfrd\nroyfd\ndryf"))))
+
+(deftest d6-pt2-answer
+  (is (= 3398 (->> d6-input
+                   (map d6-p2)
+                   (map count)
+                   (reduce +)))))
+
+
+
