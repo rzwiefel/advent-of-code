@@ -295,5 +295,71 @@
                    (map count)
                    (reduce +)))))
 
+; --------------------------------------------------------
+; Day 7 Part 1 and 2
+(defn d7-split [line]
+  (let [[bag inside-bags] (map s/trim (s/split line #"bags contain"))]
+    (if (= inside-bags "no other bags.")
+      (list bag '())
+      (list bag (as-> inside-bags v
+                      (s/trim v)
+                      (s/split v #",\s?")
+                      (map #(s/replace % #"\s?bags?\.?" "") v)
+                      (map #(re-matches #"(\d+)\s(.+)" %) v)
+                      (map rest v)
+                      (map #(let [[num color] %] (list (Integer/parseInt num) color)) v))))))
+
+(def d7-input
+  (->> "2020-d7.txt"
+       file->vec
+       (map d7-split)
+       (reduce #(conj %1 (vec %2)) {})))
+
+(def d7-test
+  (->> "light red bags contain 1 bright white bag, 2 muted yellow bags.\ndark orange bags contain 3 bright white bags, 4 muted yellow bags.\nbright white bags contain 1 shiny gold bag.\nmuted yellow bags contain 2 shiny gold bags, 9 faded blue bags.\nshiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.\ndark olive bags contain 3 faded blue bags, 4 dotted black bags.\nvibrant plum bags contain 5 faded blue bags, 6 dotted black bags.\nfaded blue bags contain no other bags.\ndotted black bags contain no other bags."
+       s/split-lines
+       (map d7-split)
+       (reduce #(conj %1 (vec %2)) {})))
+
+
+(def d7-test2
+  (->> "shiny gold bags contain 2 dark red bags.\ndark red bags contain 2 dark orange bags.\ndark orange bags contain 2 dark yellow bags.\ndark yellow bags contain 2 dark green bags.\ndark green bags contain 2 dark blue bags.\ndark blue bags contain 2 dark violet bags.\ndark violet bags contain no other bags."
+       s/split-lines
+       (map d7-split)
+       (reduce #(conj %1 (vec %2)) {})))
+
+
+(defn can-hold [color outer-bag]
+  (let [[outer holdings] outer-bag]
+    (if ((set (map second holdings)) color) true false)))
+
+(defn find-holders [color bags]
+  (for [bag bags
+        :when (can-hold color bag)]
+    bag))
+
+(defn find-all-holders [colors last-size]
+  (let [newset (into colors
+                     (set
+                       (flatten
+                         (map #(map first (find-holders % d7-input)) colors))))]
+    (if (= last-size (count newset))
+      newset
+      (find-all-holders newset (count newset)))))
+
+
+(defn count-innerbags [input color]
+  (let [innerbags (get input color)]
+    (if (empty? innerbags)
+      1
+      (reduce + (for [[in-num in-col] innerbags
+                      :let [countouter (if (empty? (get input in-col)) 0 in-num)]]
+                  (+ countouter (* in-num (count-innerbags input in-col))))))))
+
+(deftest count-shiny-gold-holdings
+  (is (= 32 (count-innerbags d7-test "shiny gold")))
+  (is (= 126 (count-innerbags d7-test2 "shiny gold")))
+  (is (= 8030 (count-innerbags d7-input "shiny gold"))))
+
 
 
