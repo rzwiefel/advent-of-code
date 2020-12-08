@@ -378,10 +378,10 @@
     (list (keyword opstr) (Integer/parseInt argstr))))
 
 (deftest test-parse-instruct
-  (is (= '(:nop 0) (parse-instruct (nth d8-test 0))))
-  (is (= '(:acc 1) (parse-instruct (nth d8-test 1))))
-  (is (= '(:jmp 4) (parse-instruct (nth d8-test 2))))
-  (is (= '(:jmp -3) (parse-instruct (nth d8-test 4)))))
+  (is (= '(:nop 0) (parse-instruct "nop +0")))
+  (is (= '(:acc 1) (parse-instruct "acc +1")))
+  (is (= '(:jmp 4) (parse-instruct "jmp +4")))
+  (is (= '(:jmp -3) (parse-instruct "jmp -3"))))
 
 (defn pre-execute-state-update [code ptr state]
   (-> state
