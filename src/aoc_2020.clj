@@ -366,7 +366,7 @@
   (is (= 8030 (count-innerbags d7-input "shiny gold"))))
 
 ; --------------------------------------------------------
-; Day 7 Part 1 and 2
+; Day 8 Part 1 and 2
 
 (def d8-input (->> "2020-d8.txt" file->vec))
 (def d8-test
