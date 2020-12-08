@@ -397,19 +397,21 @@
     (>= ptr (count code))
     {:exit :success}))
 
-(defn process [boot-code]
-  (loop [code boot-code
-         ptr 0
-         state {:acc 0 :instruct-count 0}]
-    (let [state (pre-execute-state-update code ptr state)
-          status (evaluate-status code ptr state)]
-      (if (some? status)
-        {:code code :ptr ptr :state state :status status}
-        (let [[op arg] (parse-instruct (nth code ptr))]
-          (condp = op
-            :nop (recur code (inc ptr) state)
-            :acc (recur code (inc ptr) (update state :acc + arg))
-            :jmp (recur code (+ ptr arg) state)))))))
+(defn process
+  ([boot-code] (process boot-code {}))
+  ([boot-code supplied-state]
+   (loop [code boot-code
+          ptr 0
+          state (merge {:acc 0 :instruct-count 0} supplied-state)]
+     (let [state (pre-execute-state-update code ptr state)
+           status (evaluate-status code ptr state)]
+       (if (some? status)
+         {:code code :ptr ptr :state state :status status}
+         (let [[op arg] (parse-instruct (nth code ptr))]
+           (condp = op
+             :nop (recur code (inc ptr) state)
+             :acc (recur code (inc ptr) (update state :acc + arg))
+             :jmp (recur code (+ ptr arg) state))))))))
 
 (deftest test-process
   (is (= 5 (:acc (:state (process d8-test)))))
