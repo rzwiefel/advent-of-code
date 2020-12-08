@@ -360,11 +360,87 @@
       (apply + (for [[in-num in-col] innerbags]
                  (+ in-num (* in-num (count-innerbags input in-col))))))))
 
-
 (deftest count-shiny-gold-holdings
   (is (= 32 (count-innerbags d7-test "shiny gold")))
   (is (= 126 (count-innerbags d7-test2 "shiny gold")))
   (is (= 8030 (count-innerbags d7-input "shiny gold"))))
 
+; --------------------------------------------------------
+; Day 7 Part 1 and 2
+
+(def d8-input (->> "2020-d8.txt" file->vec))
+(def d8-test
+  (->> "nop +0\nacc +1\njmp +4\nacc +3\njmp -3\nacc -99\nacc +1\njmp -4\nacc +6"
+       (s/split-lines)))
+
+(defn parse-instruct [line]
+  (let [[opstr argstr] (s/split line #"\s")]
+    (list (keyword opstr) (Integer/parseInt argstr))))
+
+(deftest test-parse-instruct
+  (is (= '(:nop 0) (parse-instruct (nth d8-test 0))))
+  (is (= '(:acc 1) (parse-instruct (nth d8-test 1))))
+  (is (= '(:jmp 4) (parse-instruct (nth d8-test 2))))
+  (is (= '(:jmp -3) (parse-instruct (nth d8-test 4)))))
+
+(defn pre-execute-state-update [code ptr state]
+  (-> state
+      (update-in [:linecount ptr] #(if (nil? %) 1 (inc %)))
+      (update-in [:instruct-count] inc)))
+
+(defn evaluate-status [code ptr state]
+  (cond
+    (> (get-in state [:linecount ptr]) 1)
+    {:exit :executed-line-twice :line ptr}
+    (> (:instruct-count state) 10000)
+    {:exit :exceeded-instruct-count}
+    (>= ptr (count code))
+    {:exit :success}))
+
+(defn process [boot-code]
+  (loop [code boot-code
+         ptr 0
+         state {:acc 0 :instruct-count 0}]
+    #_(println "PRE" #_code ptr state)
+    (let [state (pre-execute-state-update code ptr state)
+          status (evaluate-status code ptr state)]
+      #_(println "during" #_code ptr state op arg)
+      (if (some? status)
+        {:code code :ptr ptr :state state :status status}
+        (let [[op arg] (parse-instruct (nth code ptr))]
+          (condp = op
+            :nop (recur code (inc ptr) state)
+            :acc (recur code (inc ptr) (update state :acc + arg))
+            :jmp (recur code (+ ptr arg) state)))))))
+
+(deftest test-process
+  (is (= 5 (:acc (:state (process d8-test)))))
+  (is (= 1331 (:acc (:state (process d8-input))))))
+
+(defn boot-code-permus [boot-code]
+  (keep-indexed
+    (fn [idx itm]
+      (let [[op arg] (parse-instruct itm)]
+        (when (#{:nop :jmp} op)
+          (assoc
+            boot-code
+            idx
+            (s/replace itm #"nop|jmp" {"nop" "jmp" "jmp" "nop"})))))
+    boot-code))
+
+(defn find-working-boot-code [boot-code]
+  (for [new-boot (boot-code-permus boot-code)
+        :let [res (process new-boot)]
+        :when (= :success (get-in res [:status :exit]))]
+    res))
 
 
+(deftest check-bootcode-permu-solver
+  (is (= 8 (-> d8-test
+               find-working-boot-code
+               first
+               (get-in [:state :acc]))))
+  (is (= 1121 (-> d8-input
+                  find-working-boot-code
+                  first
+                  (get-in [:state :acc])))))
