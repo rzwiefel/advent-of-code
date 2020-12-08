@@ -401,10 +401,8 @@
   (loop [code boot-code
          ptr 0
          state {:acc 0 :instruct-count 0}]
-    #_(println "PRE" #_code ptr state)
     (let [state (pre-execute-state-update code ptr state)
           status (evaluate-status code ptr state)]
-      #_(println "during" #_code ptr state op arg)
       (if (some? status)
         {:code code :ptr ptr :state state :status status}
         (let [[op arg] (parse-instruct (nth code ptr))]
