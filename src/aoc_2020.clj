@@ -16,7 +16,7 @@
   (s/split-lines (read-resource name)))
 
 (defn file->numvec [name]
-  (map #(Integer/parseInt %) (file->vec name)))
+  (map #(Long/parseLong %) (file->vec name)))
 
 
 ; --------------------------------------------------------
@@ -390,12 +390,9 @@
 
 (defn evaluate-status [code ptr state]
   (cond
-    (> (get-in state [:linecount ptr]) 1)
-    {:exit :executed-line-twice :line ptr}
-    (> (:instruct-count state) 10000)
-    {:exit :exceeded-instruct-count}
-    (>= ptr (count code))
-    {:exit :success}))
+    (> (get-in state [:linecount ptr]) 1) {:exit :executed-line-twice :line ptr}
+    (> (:instruct-count state) 10000) {:exit :exceeded-instruct-count}
+    (>= ptr (count code)) {:exit :success}))
 
 (defn process
   ([boot-code] (process boot-code {}))
@@ -444,3 +441,106 @@
                   find-working-boot-code
                   first
                   (get-in [:state :acc])))))
+
+; --------------------------------------------------------
+; Day 9 Part 1 and 2
+
+(def d9-input (->> "2020-d9.txt" file->numvec vec))
+
+(def d9-test
+  (->> "35\n20\n15\n25\n47\n40\n62\n55\n65\n95\n102\n117\n150\n182\n127\n219\n299\n277\n309\n576"
+       s/split-lines
+       (map #(Long/parseLong %))
+       vec))
+
+(defn d9-check [lines pre-len idx]
+  (let [num (nth lines (+ idx pre-len))
+        preamble (subvec lines idx (+ idx pre-len))
+        combs (c/combinations preamble 2)
+        sums (map (fn [pair]
+                    (let [[l r] pair sum (+ l r)]
+                      [sum [l r]])) combs)
+        matches (first (for [[sum pair] sums
+                             :when (= sum num)]
+                         [sum pair]))]
+    (when (empty? matches)
+      (list (+ pre-len idx) (lines (+ pre-len idx))))))
+
+
+(defn d9-find-wrong [lines pre-len]
+  (->> (range (- (count lines) pre-len 1))
+       (map #(d9-check lines pre-len %))
+       (filter some?)
+       first
+       second))
+
+(deftest d9-solve-pt1
+  (is (= 127 (d9-find-wrong d9-test 5)))
+  (is (= 14360655 (d9-find-wrong d9-input 25))))
+
+(defn check-contig-num-sum [target nums]
+  (loop [sum 0
+         nums nums
+         used []]
+    (cond
+      (> sum target) nil
+      (= sum target) used
+      :else (recur (+ sum (first nums)) (rest nums) (conj used (first nums))))))
+
+(defn find-contig-sum [target nums]
+  (if (empty? nums)
+    nil
+    (let [ans (check-contig-num-sum target nums)]
+      (if (nil? ans)
+        (recur target (rest nums))
+        ans))))
+
+(deftest d9-solve-pt2
+  (is (= 62 (let [ans (find-contig-sum 127 d9-test)]
+              (+ (apply min ans) (apply max ans)))))
+  (is (= 1962331 (let [ans (find-contig-sum 14360655 d9-input)]
+                   (+ (apply min ans) (apply max ans))))))
+
+; --------------------------------------------------------
+; Day 10
+
+(def d10-input (->> "2020-d10.txt" file->numvec vec))
+(def d10-input (vec (sort (conj d10-input (+ (apply max d10-input) 3) 0))))
+
+(def d10-test (->> "16\n10\n15\n5\n1\n11\n7\n19\n6\n12\n4"
+                   s/split-lines
+                   (map #(Long/parseLong %))
+                   vec))
+(def d10-test (vec (sort (conj d10-test (+ (apply max d10-test) 3) 0))))
+
+(def d10-test2
+  (->> "28\n33\n18\n42\n31\n14\n46\n20\n48\n47\n24\n23\n49\n45\n19\n38\n39\n11\n1\n32\n25\n35\n8\n17\n7\n9\n4\n2\n34\n10\n3"
+       s/split-lines
+       (map #(Long/parseLong %))
+       vec))
+(def d10-test2 (vec (sort (conj d10-test2 (+ (apply max d10-test2) 3) 0))))
+
+(defn find-joltage-diff [lines]
+  (frequencies (map #(apply - (reverse %)) (partition 2 1 (sort lines)))))
+
+(deftest test-joltage-diff
+  (is (= {1 7, 3 5} (find-joltage-diff d10-test)))
+  (is (= {1 22, 3 10} (find-joltage-diff d10-test2)))
+  (is (= {1 64, 3 31} (find-joltage-diff d10-input))))
+
+(defn find-joltage-arrangements [joltages]
+  (->> joltages
+       sort
+       (partition 2 1)
+       (map reverse)
+       (map #(apply - %))
+       (partition-by identity)
+       (filter #(= 1 (first %)))
+       (filter #(< 1 (count %)))
+       (map (fn [items] ({2 2 3 4 4 7} (count items))))
+       (apply *)))
+
+(deftest test-joltage-arrangements
+  (is (= 8 (find-joltage-arrangements d10-test)))
+  (is (= 19208 (find-joltage-arrangements d10-test2)))
+  (is (= 3543369523456 (find-joltage-arrangements d10-input))))
