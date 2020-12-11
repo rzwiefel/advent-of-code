@@ -544,3 +544,77 @@
   (is (= 8 (find-joltage-arrangements d10-test)))
   (is (= 19208 (find-joltage-arrangements d10-test2)))
   (is (= 3543369523456 (find-joltage-arrangements d10-input))))
+
+
+; --------------------
+; Day 11
+
+(def d11-input (->> "2020-d11.txt" file->vec (map vec) vec))
+(def d11-test (->> "L.LL.LL.LL\nLLLLLLL.LL\nL.L.L..L..\nLLLL.LL.LL\nL.LL.LL.LL\nL.LLLLL.LL\n..L.L.....\nLLLLLLLLLL\nL.LLLLLL.L\nL.LLLLL.LL" s/split-lines (map vec) vec))
+(def d11-test2 (->> ".......#.\n...#.....\n.#.......\n.........\n..#L....#\n....#....\n.........\n#........\n...#....." s/split-lines (map vec) vec))
+
+
+(defn follow-los [board row col rowf colf]
+  (let [spot (get (get board (rowf row)) (colf col))]
+    (if (contains? #{\L \# nil} spot)
+      spot
+      (recur board (rowf row) (colf col) rowf colf))))
+
+(defn get-adjacent-los-seats [board row col]
+  (let [n (follow-los board row col dec identity)
+        ne (follow-los board row col dec inc)
+        e (follow-los board row col identity inc)
+        se (follow-los board row col inc inc)
+        s (follow-los board row col inc identity)
+        sw (follow-los board row col inc dec)
+        w (follow-los board row col identity dec)
+        nw (follow-los board row col dec dec)]
+    [n ne e se s sw w nw]))
+
+(defn get-adjacent-seats [board row col]
+  (let [n (get (get board (dec row)) col)
+        ne (get (get board (dec row)) (inc col))
+        e (get (get board row) (inc col))
+        se (get (get board (inc row)) (inc col))
+        s (get (get board (inc row)) col)
+        sw (get (get board (inc row)) (dec col))
+        w (get (get board row) (dec col))
+        nw (get (get board (dec row)) (dec col))]
+    [n ne e se s sw w nw]))
+
+(def ^:dynamic adjacency-func get-adjacent-los-seats)
+(def ^:dynamic min-occupied 5)
+
+(defn d11-evaluate [board]
+  (let [newboard (for [row (range (count board))
+                       col (range (count (first board)))
+                       :let [seat ((board row) col)
+                             adjacent (adjacency-func board row col)
+                             freqs (frequencies adjacent)]
+                       :when (not= seat \.)]
+                   (do
+                     (if (= seat \L)
+                       (if (nil? (get freqs \#))
+                         (list row col \#)
+                         (list row col \L))
+                       (if (>= (get freqs \# 0) min-occupied)
+                         (list row col \L)
+                         (list row col \#)))))]
+    (reduce (fn [nb [row col seat]]
+              (update-in nb [row col] (fn [old] seat)))
+            board
+            newboard)))
+
+(defn d11-proces-till-stagnant [oldboard newboard]
+  (if (= oldboard newboard)
+    newboard
+    (recur newboard (d11-evaluate newboard))))
+
+#_(deftest d11-doit
+    (binding [adjacency-func get-adjacent-seats
+              min-occupied 4]
+      (is (= 37 ((frequencies (flatten (d11-proces-till-stagnant nil d11-test))) \#)))
+      (is (= 2344 ((frequencies (flatten (d11-proces-till-stagnant nil d11-input))) \#))))
+    (is (= 26 ((frequencies (flatten (d11-proces-till-stagnant nil d11-test))) \#)))
+    (is (= 2076 ((frequencies (flatten (d11-proces-till-stagnant nil d11-input))) \#))))
+
