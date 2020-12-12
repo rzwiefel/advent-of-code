@@ -618,3 +618,62 @@
     (is (= 26 ((frequencies (flatten (d11-proces-till-stagnant nil d11-test))) \#)))
     (is (= 2076 ((frequencies (flatten (d11-proces-till-stagnant nil d11-input))) \#))))
 
+
+; --------------------
+; Day 12
+
+(defn d12-parseline [line]
+  (let [action (first line)
+        num (Long/parseLong (apply str (rest line)))]
+    (list action num)))
+
+(def d12-input (->> "2020-d12.txt" file->vec (map d12-parseline)))
+(def d12-test (->> "F10\nN3\nF7\nR90\nF11" s/split-lines (map d12-parseline)))
+(def d12-test2 (->> ["N1" "E1" "S1" "W1" "R360" "L360"
+                     "F10"
+                     "N3"
+                     "F7"
+                     "R90"
+                     "L90"
+                     "R90"
+                     "F11"] (map d12-parseline)))
+
+(defn d12-evaluate [lines xpos ypos direction]
+  (if (empty? lines)
+    (list xpos ypos)
+    (let [[action num] (first lines)]
+      (println xpos ypos direction "-" action num)
+      (condp = action
+        \F (let [x (* (Math/cos (Math/toRadians direction)) num)
+                 y (* (Math/sin (Math/toRadians direction)) num)]
+             (recur (rest lines) (+ xpos x) (+ ypos y) direction))
+        \L (recur (rest lines) xpos ypos (mod (+ direction num) 360))
+        \R (recur (rest lines) xpos ypos (mod (- direction num) 360))
+        \E (recur (rest lines) (+ num xpos) ypos direction)
+        \W (recur (rest lines) (- xpos num) ypos direction)
+        \N (recur (rest lines) xpos (+ num ypos) direction)
+        \S (recur (rest lines) xpos (- ypos num) direction)))))
+
+(defn d12-evaluate-pt2 [lines xpos ypos xway yway]
+  (let [xpos (Math/round (double xpos))
+        ypos (Math/round (double ypos))
+        xway (Math/round (double xway))
+        yway (Math/round (double yway))]
+    (if (empty? lines)
+      (list xpos ypos)
+      (let [[action num] (first lines)]
+        (println xpos ypos "   " xway yway "   next> " action num)
+        (condp = action
+          \F (recur (rest lines) (+ xpos (* num xway)) (+ ypos (* num yway)) xway yway)
+          \L (let [angle-rads (Math/atan2 yway xway)
+                   dist (Math/sqrt (+ (* yway yway) (* xway xway)))
+                   newangle (+ angle-rads (Math/toRadians num))]
+               (recur (rest lines) xpos ypos (* (Math/cos newangle) dist) (* (Math/sin newangle) dist)))
+          \R (let [angle-rads (Math/atan2 yway xway)
+                   dist (Math/sqrt (+ (* yway yway) (* xway xway)))
+                   newangle (- angle-rads (Math/toRadians num))]
+               (recur (rest lines) xpos ypos (* (Math/cos newangle) dist) (* (Math/sin newangle) dist)))
+          \N (recur (rest lines) xpos ypos xway (+ yway num))
+          \S (recur (rest lines) xpos ypos xway (- yway num))
+          \E (recur (rest lines) xpos ypos (+ xway num) yway)
+          \W (recur (rest lines) xpos ypos (- xway num) yway))))))
