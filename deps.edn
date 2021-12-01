@@ -2,4 +2,4 @@
  :deps
         {org.clojure/clojure            {:mvn/version "1.10.1"}
          org.clojure/math.combinatorics {:mvn/version "0.1.6"}
-         djblue/portal                  {:mvn/version "0.6.4"}}}
+         djblue/portal                  {:mvn/version "0.18.0"}}}

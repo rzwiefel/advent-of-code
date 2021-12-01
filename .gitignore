@@ -1,3 +1,6 @@
 .idea/
 .nrepl-port
 advent-of-code.iml
+.cpcache/
+.clj-kondo/
+.calva/
