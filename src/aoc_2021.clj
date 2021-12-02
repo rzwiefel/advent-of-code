@@ -110,22 +110,21 @@ forward 2"))
 (defn calculate-sub-position-aimed
   [substructions]
   (reduce (fn [acc [dir amount]]
-            #_(tap> {:acc acc :dir dir :amount amount})
-            (cond
-              (= dir :down)    (update acc :aim + amount)
-              (= dir :up)      (update acc :aim - amount)
-              (= dir :forward) (-> acc
-                                   (update :forward + amount)
-                                   (update :depth + (* (:aim acc) amount)))))
+            (case dir
+              :down    (update acc :aim + amount)
+              :up      (update acc :aim - amount)
+              :forward (-> acc
+                           (update :forward + amount)
+                           (update :depth + (* (:aim acc) amount)))))
           {:forward 0 :aim 0 :depth 0}
           substructions))
 
 (deftest d2p1
   (is (= 900
          (let [{:keys [depth forward]} (calculate-sub-position-aimed
-                                          (parse-substructions d2-test))]
+                                        (parse-substructions d2-test))]
            (* depth forward))))
   (is (= 1592426537
          (let [{:keys [depth forward]} (calculate-sub-position-aimed
-                                          (parse-substructions d2-input))]
+                                        (parse-substructions d2-input))]
            (* depth forward)))))
