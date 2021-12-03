@@ -119,7 +119,7 @@ forward 2"))
           {:forward 0 :aim 0 :depth 0}
           substructions))
 
-(deftest d2p1
+(deftest d2p2
   (is (= 900
          (let [{:keys [depth forward]} (calculate-sub-position-aimed
                                         (parse-substructions d2-test))]
@@ -128,3 +128,46 @@ forward 2"))
          (let [{:keys [depth forward]} (calculate-sub-position-aimed
                                         (parse-substructions d2-input))]
            (* depth forward)))))
+
+; --------------------------------------------------------
+; Day 3
+
+(def d3-input (file->vec "2021-d3.txt"))
+
+(def d3-test
+  (s/split-lines
+   "00100
+11110
+10110
+10111
+10101
+01111
+00111
+11100
+10000
+11001
+00010
+01010"))
+
+(map frequencies (apply map vector d3-test))
+(defn common-bits
+  [input]
+  (->> input
+       (apply map vector)
+       (map frequencies)
+       (map #(if (>= (get % \0) (get % \1)) 0 1))
+       (apply str)))
+
+(defn sub-power-consumption
+  [input]
+  (let [common-bin (common-bits input)
+        common   (Integer/parseInt common-bin 2)
+        ones (Integer/parseInt (apply str (repeat (count common-bin) "1")) 2)
+        uncommon (bit-xor common ones)]
+    (* common uncommon)))
+
+(deftest d3p1
+  (is (= 198 (sub-power-consumption d3-test)))
+  (is (= 3813416 (sub-power-consumption d3-input))))
+
+(common-bits d3-test)
