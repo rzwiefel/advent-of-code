@@ -7,16 +7,6 @@
    [clojure.pprint :refer [pprint]]
    [portal.api :as p]))
 
-#_(:require
-   [clojure.java.io :as io]
-   [clojure.set :as cset]
-   [clojure.string :as s]
-   [clojure.spec.alpha :as spec]
-   [clojure.test :refer [deftest is are]]
-   [clojure.math.combinatorics :as c]
-   [clojure.pprint :refer [pprint]]
-   [portal.api :as p])
-
 (defn read-resource
   [name]
   (slurp (io/resource name)))
@@ -136,38 +126,46 @@ forward 2"))
 
 (def d3-test
   (s/split-lines
-   "00100
-11110
-10110
-10111
-10101
-01111
-00111
-11100
-10000
-11001
-00010
-01010"))
+   "00100\n11110\n10110\n10111\n10101\n01111\n00111\n11100\n10000\n11001\n00010\n01010"))
 
-(map frequencies (apply map vector d3-test))
 (defn common-bits
-  [input]
+  [input comparerer]
   (->> input
        (apply map vector)
        (map frequencies)
-       (map #(if (>= (get % \0) (get % \1)) 0 1))
+       (map #(if (comparerer (get % \0 0) (get % \1 0)) 0 1))
        (apply str)))
 
 (defn sub-power-consumption
   [input]
-  (let [common-bin (common-bits input)
-        common   (Integer/parseInt common-bin 2)
-        ones (Integer/parseInt (apply str (repeat (count common-bin) "1")) 2)
-        uncommon (bit-xor common ones)]
+  (let [common-bin   (common-bits input >=)
+        uncommon-bin (common-bits input <)
+        common       (Integer/parseInt common-bin 2)
+        uncommon     (Integer/parseInt uncommon-bin 2)]
     (* common uncommon)))
 
 (deftest d3p1
   (is (= 198 (sub-power-consumption d3-test)))
   (is (= 3813416 (sub-power-consumption d3-input))))
 
-(common-bits d3-test)
+(defn sub-c-or-2
+  [ratings pos comparer]
+  (if (next ratings)
+    (let [filterer         (common-bits ratings comparer)
+          filtered-ratings (filter #(= (nth % pos) (nth filterer pos)) ratings)]
+      (sub-c-or-2 filtered-ratings
+                  (inc pos)
+                  comparer))
+    (first ratings)))
+
+(defn sub-life-support
+  [input]
+  (let [o2  (sub-c-or-2 input 0 >)
+        co2 (sub-c-or-2 input 0 <=)]
+    (->> [o2 co2]
+         (map #(Integer/parseInt % 2))
+         (apply *))))
+
+(deftest d3p2
+  (is (= 230 (sub-life-support d3-test)))
+  (is (= 2990784 (sub-life-support d3-input))))
