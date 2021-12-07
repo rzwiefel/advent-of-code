@@ -7,6 +7,16 @@
    [clojure.pprint :refer [pprint]]
    [portal.api :as p]))
 
+
+(comment
+ (require '[portal.api :as p])
+ (def portal
+   (p/open {:portal.colors/theme :portal.colors/material-ui
+            :launcher            :vs-code}))
+ (add-tap #'p/submit)
+ (tap> :ready-to-go)
+)
+
 (defn read-resource
   [name]
   (slurp (io/resource name)))
@@ -166,6 +176,254 @@ forward 2"))
          (map #(Integer/parseInt % 2))
          (apply *))))
 
+(time (sub-life-support d3-input))
 (deftest d3p2
   (is (= 230 (sub-life-support d3-test)))
   (is (= 2990784 (sub-life-support d3-input))))
+
+; --------------------------------------------------------
+; Day 4
+
+(def d4-input (slurp (io/resource "2021-d4.txt")))
+
+(def d4-test
+  "7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+22 13 17 11  0
+ 8  2 23  4 24
+21  9 14 16  7
+ 6 10  3 18  5
+ 1 12 20 15 19
+
+ 3 15  0  2 22
+ 9 18 13 17  5
+19  8  7 25 23
+20 11 10 24  4
+14 21 16 12  6
+
+14 21 17 24  4
+10 16 15  9 19
+18  8 23 26 20
+22 11 13  6  5
+ 2  0 12  3  7
+")
+
+(defn split-callouts-and-boards
+  [input]
+
+  (let [[callouts & boards] (s/split input #"\n\n")
+        callouts            (map #(Integer/parseInt %) (s/split callouts #","))
+        boards              (for [board boards]
+                              (->> board
+                                   s/split-lines
+                                   (map #(s/split % #"\s"))
+                                   (map #(filter seq %))
+                                   (map #(map (fn [i] (Long/parseLong i)) %))))]
+    [callouts boards]))
+
+(defn check-bingo
+  [nums board]
+  (let [numset        (apply hash-set nums)
+        board-cols    (apply map list board)
+        rows-and-cols (concat board board-cols)]
+    (when (some #(every? numset %) rows-and-cols)
+      [nums board])))
+
+(defn check-boards
+  [nums boards curnums won-boards]
+  (let [board-checks (for [board boards
+                           :let  [check (check-bingo curnums board)]
+                           :when (some? check)]
+                       check)]
+    (if (empty? nums)
+      (concat won-boards board-checks)
+      (check-boards (rest nums)
+                    (remove (set (map second board-checks)) boards)
+                    (conj curnums (first nums))
+                    (concat won-boards board-checks)))))
+
+(defn d4p1-solve
+  [input board-picker]
+  (let [[nums boards]    (split-callouts-and-boards input)
+        [win-nums board] (board-picker (check-boards nums boards [] []))]
+    (* (last win-nums) (apply + (remove (set win-nums) (flatten board))))))
+
+(deftest d4p1
+  (is (= 4512 (d4p1-solve d4-test first)))
+  (is (= 49860 (d4p1-solve d4-input first))))
+
+(deftest d4p2
+  (is (= 1924 (d4p1-solve d4-test last)))
+  (is (= 24628 (d4p1-solve d4-input last)))
+)
+
+; --------------------------------------------------------
+; Day 5
+
+(defn d5-process-line
+  [input]
+  (let [[_ x1 y1 x2 y2] (re-find #"(\d+),(\d+)\s->\s(\d+),(\d+)" input)
+        x1              (Long/parseLong x1)
+        y1              (Long/parseLong y1)
+        x2              (Long/parseLong x2)
+        y2              (Long/parseLong y2)]
+    [[x1 y1] [x2 y2]]))
+
+(def d5-input (mapv d5-process-line (file->vec "2021-d5.txt")))
+
+(def d5-test
+  (mapv
+   d5-process-line
+   (s/split-lines
+    "0,9 -> 5,9
+8,0 -> 0,8
+9,4 -> 3,4
+2,2 -> 2,1
+7,0 -> 7,4
+6,4 -> 2,0
+0,9 -> 2,9
+3,4 -> 1,4
+0,0 -> 8,8
+5,5 -> 8,2")))
+
+(defn generate-line-points
+  [[[x1 y1] [x2 y2]]]
+  (let [len   (inc (max (Math/abs (- x1 x2)) (Math/abs (- y1 y2))))
+        xnums (cond
+                (= x1 x2) (repeat x1)
+                (> x1 x2) (range x1 (dec x2) -1)
+                (< x1 x2) (range x1 (inc x2)))
+        ynums (cond
+                (= y1 y2) (repeat y1)
+                (> y1 y2) (range y1 (dec y2) -1)
+                (< y1 y2) (range y1 (inc y2)))]
+    (take len (map vector xnums ynums))))
+
+(defn get-dangerous-points
+  [input]
+  (->> input
+       (map generate-line-points)
+       (apply concat)
+       frequencies
+       (filter #(>= (second %) 2))))
+
+(defn horizontal-and-vertical-only
+  [coll]
+  (filter (fn [[[x1 y1] [x2 y2]]] (or (= x1 x2) (= y1 y2))) coll))
+
+(deftest d5p1
+  (is (= 5
+         (count (get-dangerous-points (horizontal-and-vertical-only d5-test)))))
+  (is (= 5608
+         (count (get-dangerous-points (horizontal-and-vertical-only
+                                       d5-input))))))
+
+(deftest d5p2
+  (is (= 12 (count (get-dangerous-points d5-test))))
+  (is (= 20299
+         (count (get-dangerous-points d5-input)))))
+
+; --------------------------------------------------------
+; Day 6
+
+(def d6-input
+  (map #(Long/parseLong %)
+       (s/split (s/trim (slurp (io/resource "2021-d6.txt"))) #",")))
+(def d6-test (map #(Long/parseLong %) (s/split "3,4,3,1,2" #",")))
+
+
+#_(defn simulate-lanternfish
+    [fish]
+    (concat (map (comp #(mod % 7) dec) fish)))
+
+(defn simulate-lanternfish-step
+  [fish]
+  (-> fish
+      (assoc 0 (get fish 1))
+      (assoc 1 (get fish 2))
+      (assoc 2 (get fish 3))
+      (assoc 3 (get fish 4))
+      (assoc 4 (get fish 5))
+      (assoc 5 (get fish 6))
+      (assoc 6 (+ (get fish 0) (get fish 7)))
+      (assoc 7 (get fish 8))
+      (assoc 8 (get fish 0))
+  ))
+
+(defn simulate-lanternfish
+  [fish days]
+  (if (> days 0)
+    (recur (simulate-lanternfish-step fish) (dec days))
+    fish))
+
+(defn fish-list
+  [fish]
+  (merge {0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0}
+         (frequencies fish)))
+
+(deftest d6
+  (is (= 26 (apply + (vals (simulate-lanternfish (fish-list d6-test) 18)))))
+  (is (= 5934 (apply + (vals (simulate-lanternfish (fish-list d6-test) 80)))))
+  (is (= 372300
+         (apply + (vals (simulate-lanternfish (fish-list d6-input) 80)))))
+  (is (= 1675781200288
+         (apply + (vals (simulate-lanternfish (fish-list d6-input) 256))))))
+
+(comment
+ (tap> (take 18
+             (iterate simulate-lanternfish-step
+                      (merge {0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0}
+                             (frequencies d6-test)))))
+
+ (simulate-lanternfish (merge {0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0}
+                              (frequencies d6-test))
+                       18)
+
+)
+
+
+; --------------------------------------------------------
+; Day 7
+
+(def d7-input
+  (map #(Long/parseLong %)
+       (s/split (s/trim (slurp (io/resource "2021-d7.txt"))) #",")))
+(nth d7-input 499)
+
+(def d7-test [16 1 2 0 4 2 7 1 2 14])
+
+(comment
+ (def n [200 200 1 1 1 1 1 1 1 2 20])
+ (float (/ (apply + n) (count n)))
+ (take 1 (drop (/ (count n) 2) (sort n)))
+ (apply max d7-input)
+)
+
+(defn d7-p1
+  [input]
+  (first (sort-by second
+                  (for [target (range (apply max input))]
+                    [target
+                     (reduce +
+                             (map #(Math/abs (- % target))
+                                  input))]))))
+
+(defn d7-p2
+  [input]
+  (first (sort-by second
+                  (for [target (range (apply max input))]
+                    [target
+                     (reduce +
+                             (map #(let [delta (Math/abs (- % target))]
+                                     (/ (* delta (+ 1 delta)) 2))
+                                  input))]))))
+
+(deftest d7
+  (is (= 37 (second (d7-p1 d7-test))))
+  (is (= 364898 (time (second (d7-p1 d7-input)))))
+  (is (= 168 (second (d7-p2 d7-test))))
+  (is (= 104149091 (second (d7-p2 d7-input)))))
+
+; --------------------------------------------------------
+; Day 8
+
