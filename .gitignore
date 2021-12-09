@@ -4,3 +4,5 @@ advent-of-code.iml
 .cpcache/
 .clj-kondo/
 .calva/
+.lsp/
+.portal/
