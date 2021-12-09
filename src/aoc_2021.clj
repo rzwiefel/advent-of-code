@@ -5,7 +5,8 @@
    [clojure.test :refer [deftest is are]]
    [clojure.math.combinatorics :as c]
    [clojure.pprint :refer [pprint]]
-   [portal.api :as p]))
+   [portal.api :as p]
+   [clojure.set :as set]))
 
 
 (comment
@@ -426,4 +427,97 @@ forward 2"))
 
 ; --------------------------------------------------------
 ; Day 8
+
+(def d8-input (file->vec "2021-d8.txt"))
+(def d8-test (s/split-lines "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe
+edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec | fcgedb cgb dgebacf gc
+fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef | cg cg fdcagb cbg
+fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega | efabcd cedba gadfec cb
+aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga | gecf egdcabf bgf bfgea
+fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf | gebdcfa ecba ca fadegcb
+dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf | cefg dcbef fcge gbcadfe
+bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd | ed bcgafe cdgba cbgef
+egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg | gbdfcae bgc cg cgb
+gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce"))
+
+
+(comment :p1
+  (as-> d8-input it
+    (map #(s/split % #"\|") it)
+    (map second it)
+    (map #( s/split % #"\s") it)
+    (flatten it)
+    (map count it)
+    (frequencies it)
+    (apply + (vals (select-keys it [2 4 3 7]))))
+  )
+
+
+(comment
+(as-> d8-test it
+    (map #(s/split % #"\s\|\s") it)
+    (map first it)
+    (map #( s/split % #"\s") it)
+    (map #(map set %) it)
+    
+    )
+
+
+    (find-1 (first (d8-data d8-test)))
+    (find-7 (first (d8-data d8-test)))
+
+    ((set "be"))
+)
+
+
+
+(defn d8-data [input]
+  (as-> input it
+    (map #(s/split % #"\s\|\s") it)
+    (map (fn [[left right]] [(map set (s/split left #"\s"))
+                             (map set (s/split right #"\s"))]) it)))
+
+(defn find-1 [words]
+ (first (filter #(= 2 (count %)) words)))
+
+(defn find-7
+  [words]
+  (first (filter #(= 3 (count %)) words)))
+
+(defn find-4
+  [words]
+  (first (filter #(= 4 (count %)) words)))
+
+  (defn find-8
+  [words]
+  (first (filter #(= 7 (count %)) words)))
+
+(defn find-num-mapping
+[words]
+(let [num-2-3-5 (filter #(= 5 (count %)) words)
+      num-1 (find-1 words)
+      num-3  (first (filter #(set/subset? num-1 %) num-2-3-5))
+      num-4 (find-4 words)
+      seg-b  (first (set/difference num-4 num-3))
+      num-5 (first (filter #(% seg-b) num-2-3-5))
+      num-2 (first (set/difference (set num-2-3-5) #{num-3 num-5}))
+      num-0-6-9 (filter #(= 6 (count %)) words)
+      num-9 (first (filter #(set/subset? num-4 %) num-0-6-9))
+      num-0-6 (remove #{num-9} num-0-6-9)
+      num-0 (first (filter #(set/subset? num-1 %) num-0-6))
+      num-6 (first (remove #{num-0} num-0-6))
+      num-7 (find-7 words)
+      num-8 (find-8 words)]
+  {num-0 0 num-1 1 num-2 2 num-3 3 num-4 4 num-5 5 num-6 6 num-7 7 num-8 8 num-9 9}))
+
+(defn translate-num
+[input mapping]
+(Long/parseLong (s/join (map mapping input))))
+
+(comment 
+  (for [[left right] (d8-data d8-test)
+        :let [mapping (find-num-mapping left)]]
+        (translate-num right mapping))
+)
+
 
