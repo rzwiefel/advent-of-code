@@ -1,0 +1,5 @@
+{:style [:community
+         :justified
+         :how-to-ns
+         :respect-nl]
+ :map   {:comma? false}}
