@@ -1,12 +1,13 @@
 (ns y2021.d12
-  (:require [clojure.string :as s]
-            [util]))
+  (:require
+   [clojure.string :as s]
+   [util]))
 
 (def d12-input (map #(s/split % #"-") (util/file->vec "2021-d12.txt")))
 
 (def test1
   (map #(s/split % #"-")
-    (s/split-lines "start-A
+       (s/split-lines "start-A
 start-b
 A-c
 A-b
@@ -15,11 +16,12 @@ A-end
 b-end")))
 
 (def test2
-  (map #(s/split % #"-")
-    (s/split-lines
-      "dc-end
+  (map
+   #(s/split % #"-")
+   (s/split-lines
+    "dc-end
 HN-start
-start-kj 
+start-kj
 dc-start
 dc-HN
 LN-dc
@@ -29,9 +31,10 @@ kj-HN
 kj-dc")))
 
 (def test3
-  (map #(s/split % #"-")
-    (s/split-lines
-      "fs-end
+  (map
+   #(s/split % #"-")
+   (s/split-lines
+    "fs-end
 he-DX
 fs-he
 start-DX
@@ -52,7 +55,8 @@ start-RW")))
 
 (def test4
   (map #(s/split % #"-")
-    (s/split-lines #_"start-a\na-end" "start-a\na-c\nc-end\nstart-b\nb-end")))
+       (s/split-lines #_"start-a\na-end"
+                      "start-a\na-c\nc-end\nstart-b\nb-end")))
 
 (defn upper-case? [input] (Character/isUpperCase (first input)))
 (defn lower-case? [input] (not (upper-case? input)))
@@ -63,49 +67,53 @@ start-RW")))
             (-> acc
                 (update v1 concat [v2])
                 (update v2 concat [v1])))
-    {}
-    input))
+          {}
+          input))
 
 (defn walk-graph
-  [graph current ]
+  [graph current]
   (let [node (last current)]
     (if (= node "end")
       [current]
       (if (lower-case? node)
         (when-not (some #(= node %) (butlast current))
           (apply concat
-            (for [child (get graph node)]
-              (walk-graph graph (conj current child) ))))
+                 (for [child (get graph node)]
+                   (walk-graph graph (conj current child)))))
         (apply concat
-          (for [child (get graph node)]
-            (walk-graph graph (conj current child) )))))))
+               (for [child (get graph node)]
+                 (walk-graph graph (conj current child))))))))
 
 
 (comment (def input test1)
          (walk-graph (build-graph test1) ["start"])
          comment)
 
-
 (defn walk-graph-p2
-  [graph current ]
+  [graph current]
   (let [node (last current)]
     (if (= node "end")
-      [current]
+      '(current)
       (if (lower-case? node)
-        (when (or (>= 2 (count (filter #(= node %) 
-                                        current #_(butlast current))))
-                   #_(= node "start"))
-
+        (when-not
+         (or (and (> (count current) 1) (#{"start" "end"} node))
+             (let [counts-over-1 (->> current
+                                      (filter lower-case?)
+                                      frequencies
+                                      vals
+                                      (filter #(> % 1)))]
+               (not (or (= '(2) counts-over-1)
+                        (= 0 (count counts-over-1))))))
           (apply concat
-            (for [child (get graph node)]
-              (walk-graph-p2 graph (conj current child) ))))
+                 (for [child (get graph node)]
+                   (walk-graph-p2 graph (conj current child)))))
         (apply concat
-          (for [child (get graph node)]
-            (walk-graph-p2 graph (conj current child) )))))))
+               (for [child (get graph node)]
+                 (walk-graph-p2 graph (conj current child))))))))
 
 
 (comment
-  (count (walk-graph-p2 (build-graph test1) ["start"]))
-   (meta walk-graph-p2)
+ (time (count (walk-graph-p2 (build-graph test3) ["start"])))
 
-  comment)
+
+ comment)
