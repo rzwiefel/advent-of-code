@@ -10,6 +10,7 @@
   (util/grid-mapv
    (comp util/parse-long str)
    (mapv vec (util/file->vec "2021-d11.txt"))))
+
 (def d11-test
   (util/grid-mapv
    (comp util/parse-long str)
@@ -57,20 +58,25 @@
   [[x y] grid]
 
   (for [xi (range (dec x) (+ 2 x))
-                yi (range (dec y) (+ 2 y))]
-            [xi yi]))
+        yi (range (dec y) (+ 2 y))]
+    [xi yi]))
 
-(defn doflash [grid [[x y] & remaining] flashed]
+(defn doflash
+  [grid [[x y] & remaining] flashed]
   (if (nil? (or x y))
     [grid flashed]
-    (if (> (get-point grid [x y]) 9)
-      
-      (recur (update-point grid [x y] inc)
-             (concat (for [xi    (range (dec x) (+ 2 x))
-                           yi    (range (dec y) (+ 2 y))
-                           :when (not (and (= xi x) (= yi y)))]
-                       [xi yi]) remaining) 
-             (conj flashed [x y]))
+    (if (and (> (get-point grid [x y]) 9)
+             (not (flashed [x y])))
+      (let [surrounding-points (for [xi    (range (dec x) (+ 2 x))
+                                     yi    (range (dec y) (+ 2 y))
+                                     :when (not (or (and (= xi x) (= yi y))
+                                                    (nil? (get-point grid [xi yi]))))]
+                                 [xi yi])]
+        (recur (reduce (fn [acc point] (update-point acc point inc))
+                       grid
+                       surrounding-points)
+               (concat surrounding-points remaining)
+               (conj flashed [x y])))
       (recur grid remaining flashed))))
 
 (defn flash
@@ -82,20 +88,33 @@
     #_(reduce #(check-flash-surrounding %2 %1) grid all-points)))
 
 (defn p1-step
-  [input]
-  (let [increased (util/grid-mapv inc input)
-        flashed   (flash increased)
-        set-zero  (util/grid-mapv #(if (> % 9) 0 %) flashed)]
-    set-zero))
+  [[input num-flashed]]
+  (let [increased      (util/grid-mapv inc input)
+        [grid flashed] (flash increased)
+        set-zero       (util/grid-mapv #(if (> % 9) 0 %) grid)]
+    [set-zero (+ num-flashed (count flashed))]))
 
 (comment
- (get-point d11-test [0 1])
- (def input d11-test)
+  (get-point d11-test [0 1])
+  (def input d11-test)
 
- (let [all-points (for [x (range 0 (count d11-test))
-                        y (range 0 (count d11-test))]
-                    [x y])])
- (mapv #(mapv inc %) input)
- (map inc (first input))
+  (first (drop 100 (iterate p1-step [d11-input 0])))
+  
+  comment)
 
- (time (take 1 (drop 10000 (iterate (partial util/grid-mapv inc) d11-test)))))
+(defn p2-step
+  [[input num-flashed step-num]]
+  (let [increased      (util/grid-mapv inc input)
+        [grid flashed] (flash increased)
+        set-zero       (util/grid-mapv #(if (> % 9) 0 %) grid)]
+    [set-zero (count flashed) (inc step-num)]))
+
+(comment
+  (take 10 (drop 190 (iterate p2-step [d11-test 0 0])))
+  (first (drop 100 (iterate p2-step [d11-test 0])))
+
+  ( (drop-while (fn [[_ num-flashed _]] (not= num-flashed 100))
+                     (iterate p2-step [d11-input 0 0])))
+
+  comment
+  )
