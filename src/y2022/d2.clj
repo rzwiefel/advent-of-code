@@ -35,3 +35,28 @@ C Z")
      (map (juxt winner chosen-piece-score))
      flatten
      (reduce +))
+
+;X means you need to lose, 0
+;Y means you need to end the round in a draw, 3
+;Z means you need to win.6
+
+(defn winner2
+  [input]
+  (case input
+    [:A :X] 3
+    [:A :Y] 4
+    [:A :Z] 8
+    [:B :X] 1
+    [:B :Y] 5
+    [:B :Z] 9
+    [:C :X] 2
+    [:C :Y] 6
+    [:C :Z] 7))
+
+(->> input
+     (s/split-lines)
+     (map #(s/split % #"\s"))
+     (map #(map keyword %))
+     (map winner2)
+     flatten
+     (reduce +))
