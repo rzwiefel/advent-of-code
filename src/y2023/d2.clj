@@ -20,13 +20,11 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"))
     {(keyword color) (util/parse-long num)}))
 
 ;"Game 1: 3 blue, 7 green, 10 red; 4 green, 4 red; 1 green, 7 blue, 5 red; 8 blue, 10 red; 7 blue, 19 red, 1 green"
-(defn parse-line
+(defn parse-line 
   [line]
-  (let [[game-num games] (string/split line #":\s")
-        games (string/split games #";\s")
-        games (mapv #(apply merge (map parse-set(string/split % #",\s"))) games)
-        [_ game-num] (string/split game-num #"\s")
-        game-num (util/parse-long game-num)]
+  (let [[_ game-num games] (re-matches #"Game (\d+): (.*)" line)
+        game-num (Long/parseLong game-num)
+        games (mapv #(apply merge (map parse-set (string/split % #",\s"))) (string/split games #";\s"))]
     [game-num games]))
 
 
@@ -47,12 +45,8 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"))
        (map first)
        (reduce +)))
 
-(defn check-min-cubes-possible
-  [[_game-num sets]]
-  (let [sets-as-maps (for [s sets]
-                       (into {} s))]
-    (reduce (fn [acc n] (merge-with max acc n)) sets-as-maps))
-  )
+(defn check-min-cubes-possible [[_ sets]]
+  (reduce (fn [acc set] (merge-with max acc set)) {} sets))
 
 (defn p2
   [input]
