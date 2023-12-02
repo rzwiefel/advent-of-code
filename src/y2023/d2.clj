@@ -5,6 +5,8 @@
 
 (def input (util/file->vec "2023-d2.txt"))
 
+(def max-cubes {:red 12 :green 13 :blue 14})
+
 (def sample-input (string/split-lines "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
 Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
 Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
@@ -15,21 +17,18 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"))
   ; a set will look like ["3 blue" "7 green" "10 red"]
   [set]
   (let [[num color] (string/split set #"\s")]
-    #_[(util/parse-long num) (keyword color)] ;i want this kind of vec
-    #_{(keyword color) (util/parse-long num)} ; no actually i want a map like this
-    [(keyword color) (util/parse-long num)])) ; wait no a vec after all but the other way
+    {(keyword color) (util/parse-long num)}))
 
 ;"Game 1: 3 blue, 7 green, 10 red; 4 green, 4 red; 1 green, 7 blue, 5 red; 8 blue, 10 red; 7 blue, 19 red, 1 green"
 (defn parse-line
   [line]
   (let [[game-num games] (string/split line #":\s")
         games (string/split games #";\s")
-        games (mapv #(mapv parse-set(string/split % #",\s")) games)
+        games (mapv #(apply merge (map parse-set(string/split % #",\s"))) games)
         [_ game-num] (string/split game-num #"\s")
         game-num (util/parse-long game-num)]
     [game-num games]))
 
-(def max-cubes {:red 12 :green 13 :blue 14})
 
 (defn check-game-possible
 ; [1 [[[:blue 3] [:green 7] [:red 10]] [[:green 4] [:red 4]] [[:green 1] [:blue 7] [:red 5]]]]
