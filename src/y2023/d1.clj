@@ -54,11 +54,7 @@ zoneight234
        (map find-nums)
        (map string/join)
        (map word->num)
-       (map filter-digits)
-       (map (juxt first last))
-       (map string/join)
-       (map util/parse-long)
-       (reduce +)))
+       p1))
 
 (comment
   (p1 input)
